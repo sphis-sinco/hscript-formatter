@@ -1,36 +1,9 @@
-# Haxe Formatter
-
-[![Haxelib Version](https://img.shields.io/github/tag/HaxeCheckstyle/haxe-formatter.svg?label=haxelib)](http://lib.haxe.org/p/formatter)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/HaxeCheckstyle/haxe-formatter/formatter.yml)](https://github.com/HaxeCheckstyle/haxe-formatter/actions)
-[![Haxe-Formatter](https://github.com/HaxeCheckstyle/haxe-formatter/workflows/Haxe-Formatter/badge.svg)](https://github.com/HaxeCheckstyle/haxe-formatter/actions)
-[![codecov](https://codecov.io/gh/HaxeCheckstyle/haxe-formatter/branch/master/graph/badge.svg)](https://codecov.io/gh/HaxeCheckstyle/haxe-formatter)
-
-A Haxe Code Formatter based on the [tokentree](https://github.com/HaxeCheckstyle/tokentree) library.
-
-![VSCode format on save](resources/formatOnSave.gif)
-
-**It's recommended to make a backup of your files and use a diff tool.**
-
-## Features
-
-- Formatting handles:
-  - Indentation
-  - Whitespace
-  - Wrapping
-  - Empty Lines
-  - Same Line
-  - Line Ends
-- `hxformat.json` configuration files
-- supports latest Haxe 4 syntax
-- supports conditional compilation
-- [Visual Studio Code Integration](https://github.com/vshaxe/vshaxe/wiki/Formatting)
-
-## Usage
+# Usage
 
 Apart from IDE integration, there's also a command line version of haxe-formatter that can be installed from haxelib:
 
 ```bash
-haxelib install formatter
+haxelib git formatter https://github.com/sphis-sinco/hscript-formatter
 ```
 
 ### Bulk Formatting
