@@ -1,17 +1,21 @@
 package formatter;
 
-import haxe.Json;
-import haxe.Timer;
-import haxe.io.Path;
-import sys.FileSystem;
-import sys.io.File;
-import json2object.JsonParser;
 import formatter.Formatter.Result;
 import formatter.config.Config;
 import formatter.config.FormatterConfig;
+import haxe.Json;
+import haxe.Timer;
+import haxe.io.Path;
+import json2object.JsonParser;
+import sys.FileSystem;
+import sys.io.File;
 
-class Cli {
-	static function main() {
+class Cli
+{
+	static var haxe_file_extensions:Array<String> = ['.hx', '.hxc'];
+
+	static function main()
+	{
 		new Cli();
 	}
 
@@ -19,26 +23,31 @@ class Cli {
 	var mode:Mode = Format;
 	var exitCode:Int = 0;
 	var lastConfigFileName:Null<String>;
-	var extension:String = ".hx";
 
-	function new() {
+	function new()
+	{
 		var args = Sys.args();
 
 		#if neko
 		// use the faster JS version if possible
-		try {
+		try
+		{
 			var process = new sys.io.Process("node", ["-v"]);
 			var nodeExists = process.exitCode() == 0;
 			process.close();
-			if (nodeExists && FileSystem.exists("run.js")) {
+			if (nodeExists && FileSystem.exists("run.js"))
+			{
 				var exitCode = Sys.command("node", ["run.js"].concat(args));
 				Sys.exit(exitCode);
 			}
-		} catch (e:Any) {}
+		}
+		catch (e:Any) {}
 		#end
 
-		if (Sys.getEnv("HAXELIB_RUN") == "1") {
-			if (args.length > 0) {
+		if (Sys.getEnv("HAXELIB_RUN") == "1")
+		{
+			if (args.length > 0)
+			{
 				Sys.setCwd(args.pop());
 			}
 		}
@@ -47,11 +56,8 @@ class Cli {
 		var help = false;
 		var pipemode = false;
 		var argHandler = hxargs.Args.generate([
-			@doc("File or directory with haxe files to format (multiple allowed)")
+			@doc("File or directory with " + haxe_file_extensions + " files to format (multiple allowed)")
 			["-s", "--source"] => function(path:String) paths.push(path),
-
-			@doc("File extension to use, defaults to .hx")
-			["-e", "--extension"] => function(fileExtension:String) extension = "." + fileExtension.replace(".", ""),
 
 			@doc("Read code from stdin and print formatted output to stdout (needs _one_ -s <path> for reference in configuration detection)")
 			["--stdin"] => function() pipemode = true,
@@ -74,25 +80,31 @@ class Cli {
 			["--help"] => function() help = true
 		]);
 
-		function printHelp() {
+		function printHelp()
+		{
 			var version:String = FormatterVersion.getFormatterVersion();
 			Sys.println('Haxe Formatter ${version}');
 			Sys.println(argHandler.getDoc());
 		}
 
-		try {
+		try
+		{
 			argHandler.parse(args);
-		} catch (e:Any) {
+		}
+		catch (e:Any)
+		{
 			Sys.stderr().writeString(e + "\n");
 			printHelp();
 			Sys.exit(1);
 		}
-		if (args.length == 0 || help) {
+		if (args.length == 0 || help)
+		{
 			printHelp();
 			Sys.exit(0);
 		}
 
-		if (pipemode) {
+		if (pipemode)
+		{
 			runPipe(paths);
 			Sys.exit(0);
 		}
@@ -104,22 +116,28 @@ class Cli {
 		Sys.exit(exitCode);
 	}
 
-	function printStats(duration:Float) {
+	function printStats(duration:Float)
+	{
 		var seconds = Math.round(duration * 1000) / 1000;
 		var action = if (mode == Format) "Formatted" else "Checked";
 
 		Sys.println("");
 		var fileNumber:String;
-		if (FormatStats.successFiles != FormatStats.totalFiles) {
+		if (FormatStats.successFiles != FormatStats.totalFiles)
+		{
 			fileNumber = '${FormatStats.successFiles}/${FormatStats.totalFiles}';
-		} else {
+		}
+		else
+		{
 			fileNumber = '${FormatStats.successFiles}';
 		}
 		Sys.println('$action ${fileNumber} files in $seconds s.');
-		if (FormatStats.failedFiles > 0) {
+		if (FormatStats.failedFiles > 0)
+		{
 			Sys.println('Format failed on ${FormatStats.failedFiles} files');
 		}
-		if (FormatStats.disabledFiles > 0) {
+		if (FormatStats.disabledFiles > 0)
+		{
 			Sys.println('Number of disabled files: ${FormatStats.disabledFiles}');
 		}
 		Sys.println("-------------------------");
@@ -128,8 +146,10 @@ class Cli {
 		Sys.println("-------------------------");
 	}
 
-	function generateDefaultConfig(path) {
-		if (FileSystem.isDirectory(path)) {
+	function generateDefaultConfig(path)
+	{
+		if (FileSystem.isDirectory(path))
+		{
 			Sys.println('"$path" is a directory, not a file');
 			Sys.exit(1);
 		}
@@ -140,47 +160,59 @@ class Cli {
 		Sys.exit(0);
 	}
 
-	function run(paths:Array<String>) {
-		for (path in paths) {
+	function run(paths:Array<String>)
+	{
+		for (path in paths)
+		{
 			var path:String = StringTools.trim(path);
-			if (!FileSystem.exists(path)) {
+			if (!FileSystem.exists(path))
+			{
 				Sys.println('Skipping \'$path\' (path does not exist)');
 				continue;
 			}
-			if (FileSystem.isDirectory(path)) {
+			if (FileSystem.isDirectory(path))
+			{
 				run([for (file in FileSystem.readDirectory(path)) Path.join([path, file])]);
-			} else {
+			}
+			else
+			{
 				formatFile(path);
 			}
 		}
 	}
 
-	function runPipe(paths:Array<String>) {
+	function runPipe(paths:Array<String>)
+	{
 		var content:Null<Bytes> = null;
-		try {
+		try
+		{
 			#if nodejs
 			content = readNodeJsBytes(Sys.stdin());
 			#else
 			content = Sys.stdin().readAll();
 			#end
 
-			if (content == null) {
+			if (content == null)
+			{
 				Sys.stderr().writeString("Could not read anything from STDIN");
 				Sys.exit(-1);
 			}
-			if (paths.length != 1) {
+			if (paths.length != 1)
+			{
 				Sys.println(content);
 				Sys.stderr().writeString("Please use exactly one `--source <path>` parameter when calling formatter with `--stdin`");
 				Sys.exit(3);
 			}
-			if (!FileSystem.exists(paths[0])) {
+			if (!FileSystem.exists(paths[0]))
+			{
 				Sys.println(content);
 				Sys.stderr().writeString('Could not find "${paths[0]}"');
 				Sys.exit(3);
 			}
 			var config = Formatter.loadConfig(paths[0]);
 			var result:Result = Formatter.format(Code(content.toString(), SourceFile(paths[0])), config);
-			switch (result) {
+			switch (result)
+			{
 				case Success(formattedCode):
 					Sys.println(formattedCode);
 					Sys.exit(0);
@@ -192,8 +224,11 @@ class Cli {
 					Sys.println(content);
 					Sys.exit(1);
 			}
-		} catch (e:Any) {
-			if (content != null) {
+		}
+		catch (e:Any)
+		{
+			if (content != null)
+			{
 				Sys.println(content);
 			}
 			Sys.stderr().writeString('Format failed: ${e}');
@@ -201,53 +236,78 @@ class Cli {
 		}
 	}
 
-	function formatFile(path:String) {
-		if (path.endsWith(extension)) {
-			var config = Formatter.loadConfig(path);
-			if (verbose) {
-				verboseLogFile(path, config);
+	function formatFile(path:String)
+	{
+		for (extension in haxe_file_extensions)
+		{
+			if (path.endsWith(extension))
+			{
+				formatTheFile(path);
+				break;
 			}
-			var content:String = File.getContent(path);
-			var result:Result = Formatter.format(Code(content, SourceFile(path)), config);
-			switch (result) {
-				case Success(formattedCode):
-					FormatStats.incSuccess();
-					switch (mode) {
-						case Format:
-							File.saveContent(path, formattedCode);
-						case Check:
-							if (formattedCode != content.toString()) {
-								Sys.println('Incorrect formatting in $path');
-								exitCode = 1;
-							}
-						case CheckStability:
-							var secondResult = Formatter.format(Code(formattedCode, SourceFile(path)), config);
-							function unstable() {
-								Sys.println('Unstable formatting in $path');
-								exitCode = 1;
-							}
-							switch (secondResult) {
-								case Success(formattedCode2) if (formattedCode != formattedCode2):
-									unstable();
-								case Failure(errorMessage):
-									unstable();
-								case _:
-							}
-					}
-				case Failure(errorMessage):
-					FormatStats.incFailed();
-					Sys.stderr().writeString('Failed to format $path: $errorMessage\n');
-					exitCode = 1;
-				case Disabled:
-					FormatStats.incDisabled();
+			else
+			{
+				trace('Doesn\'t end with $extension');
 			}
 		}
 	}
 
-	function verboseLogFile(path:String, config:Null<Config>) {
-		if (config != null) {
-			if ((lastConfigFileName == null) || (lastConfigFileName != config.configFileName)) {
-				if (lastConfigFileName != null) {
+	function formatTheFile(path:String)
+	{
+		var config = Formatter.loadConfig(path);
+		if (verbose)
+		{
+			verboseLogFile(path, config);
+		}
+		var content:String = File.getContent(path);
+		var result:Result = Formatter.format(Code(content, SourceFile(path)), config);
+		switch (result)
+		{
+			case Success(formattedCode):
+				FormatStats.incSuccess();
+				switch (mode)
+				{
+					case Format:
+						File.saveContent(path, formattedCode);
+					case Check:
+						if (formattedCode != content.toString())
+						{
+							Sys.println('Incorrect formatting in $path');
+							exitCode = 1;
+						}
+					case CheckStability:
+						var secondResult = Formatter.format(Code(formattedCode, SourceFile(path)), config);
+						function unstable()
+						{
+							Sys.println('Unstable formatting in $path');
+							exitCode = 1;
+						}
+						switch (secondResult)
+						{
+							case Success(formattedCode2) if (formattedCode != formattedCode2):
+								unstable();
+							case Failure(errorMessage):
+								unstable();
+							case _:
+						}
+				}
+			case Failure(errorMessage):
+				FormatStats.incFailed();
+				Sys.stderr().writeString('Failed to format $path: $errorMessage\n');
+				exitCode = 1;
+			case Disabled:
+				FormatStats.incDisabled();
+		}
+	}
+
+	function verboseLogFile(path:String, config:Null<Config>)
+	{
+		if (config != null)
+		{
+			if ((lastConfigFileName == null) || (lastConfigFileName != config.configFileName))
+			{
+				if (lastConfigFileName != null)
+				{
 					Sys.println("");
 				}
 				lastConfigFileName = config.configFileName;
@@ -259,25 +319,31 @@ class Cli {
 	}
 
 	#if nodejs
-	function readNodeJsBytes(stdIn:haxe.io.Input):Bytes {
+	function readNodeJsBytes(stdIn:haxe.io.Input):Bytes
+	{
 		var bufsize:Int = 1 << 14;
 		var buf = Bytes.alloc(bufsize);
 		var total = new haxe.io.BytesBuffer();
-		try {
-			while (true) {
+		try
+		{
+			while (true)
+			{
 				var len = stdIn.readBytes(buf, 0, bufsize);
-				if (len == 0) {
+				if (len == 0)
+				{
 					break;
 				}
 				total.addBytes(buf, 0, len);
 			}
-		} catch (e:Any) {}
+		}
+		catch (e:Any) {}
 		return total.getBytes();
 	}
 	#end
 }
 
-enum Mode {
+enum Mode
+{
 	Format;
 	Check;
 	CheckStability;
