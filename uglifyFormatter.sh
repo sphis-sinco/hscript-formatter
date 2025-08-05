@@ -1,4 +1,5 @@
 #!/bin/bash
+# um...
 
 mkdir -p bin
 
